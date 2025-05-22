@@ -70,7 +70,7 @@ public class PlayerController : MonoBehaviourPunCallbacks
     // 変数の初期化
     void SetStatus()
     {
-        moveSpeed = 3.0f;      // 移動速度の初期化
+        moveSpeed = 2.0f;      // 移動速度の初期化
 
         // スクリーンの横幅、縦幅を取得
         screenWidth = Screen.width;
