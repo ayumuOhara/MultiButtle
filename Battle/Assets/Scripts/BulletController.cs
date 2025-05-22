@@ -27,7 +27,8 @@ public class BulletController : MonoBehaviourPunCallbacks
 
     void OnTriggerEnter2D(Collider2D other)
     {
-        other.gameObject.SetActive(false);
+        PlayerController player = other.GetComponent<PlayerController>();
+        player.TakeDamage();
     }
 
     void Move()

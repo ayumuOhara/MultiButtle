@@ -5,6 +5,9 @@ using UnityEngine.UI;
 
 public class PlayerController : MonoBehaviourPunCallbacks
 {
+    int hp = 1;
+    int maxHp = 1;
+
     CoolTimeFill coolTimeFill;
 
     [SerializeField] GameObject coolTimeBar;    // クールタイムバーのプレファブ
@@ -27,8 +30,8 @@ public class PlayerController : MonoBehaviourPunCallbacks
 
     void Start()
     {
-        PhotonNetwork.OfflineMode = true; // オフラインモードON
-        PhotonNetwork.CreateRoom("OfflineRoom"); // ダミールーム作成
+        //PhotonNetwork.OfflineMode = true; // オフラインモードON
+        //PhotonNetwork.CreateRoom("OfflineRoom"); // ダミールーム作成
 
         if (photonView.IsMine)
         {
@@ -79,6 +82,23 @@ public class PlayerController : MonoBehaviourPunCallbacks
         // 取得した横幅、縦幅からスクリーンの座標の最小、最大値を設定
         maxScreenPos = Camera.main.ScreenToWorldPoint(new Vector3(screenWidth, screenHeight, 0));
         minScreenPos = Camera.main.ScreenToWorldPoint(Vector3.zero);
+    }
+
+    // ダメージ処理
+    public void TakeDamage()
+    {
+        hp = Mathf.Clamp(hp--, 0, maxHp);
+
+        if(hp <= 0)
+        {
+            Dead();
+        }
+    }
+
+    // 死亡処理
+    void Dead()
+    {
+        gameObject.SetActive(false);
     }
 
     // プレイヤーの移動
