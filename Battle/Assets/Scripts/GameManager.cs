@@ -1,31 +1,50 @@
 using Photon.Pun;
-using Photon.Realtime;
-using UnityEngine;
 using System.Collections.Generic;
 using TMPro;
+using UnityEngine;
 
 public class GameManager : MonoBehaviourPunCallbacks
 {
     [SerializeField]
-    List<Transform> spawnList = new List<Transform>(); // スポーン位置（Transformで管理）
+    List<Transform> spawnList = new List<Transform>();
 
     [SerializeField]
     TextMeshProUGUI playerCntText;
 
     bool hasSpawned = false;
 
-    void Update()
+    public override void OnJoinedRoom()
     {
-        if (!hasSpawned && PhotonNetwork.CurrentRoom != null && PhotonNetwork.CurrentRoom.PlayerCount == 2)
+        TrySpawnPlayer();
+    }
+
+    void Start()
+    {
+        TrySpawnPlayer();
+    }
+
+    void TrySpawnPlayer()
+    {
+        if (!hasSpawned && PhotonNetwork.InRoom)
         {
             GameObject obj = PhotonNetwork.Instantiate("Player", Vector3.zero, Quaternion.identity);
             Debug.Log("プレイヤー生成：" + obj);
             hasSpawned = true;
-            playerCntText.gameObject.SetActive(false);
         }
-        else
+    }
+
+    void Update()
+    {
+        if (PhotonNetwork.CurrentRoom != null)
         {
-            playerCntText.text = $"現在のプレイヤー数\n{PhotonNetwork.CurrentRoom.PlayerCount} / 2";
+            if (PhotonNetwork.CurrentRoom.PlayerCount == 2)
+            {
+                playerCntText.gameObject.SetActive(false);
+            }
+            else
+            {
+                playerCntText.text = $"現在のプレイヤー数\n{PhotonNetwork.CurrentRoom.PlayerCount} / 2";
+            }
         }
     }
 }
