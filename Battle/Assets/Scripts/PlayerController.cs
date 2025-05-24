@@ -1,10 +1,13 @@
 using Photon.Pun;
+using Photon.Realtime;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class PlayerController : MonoBehaviourPunCallbacks
 {
+    GameManager gameManager;
+
     int hp = 1;
     int maxHp = 1;
 
@@ -30,11 +33,10 @@ public class PlayerController : MonoBehaviourPunCallbacks
 
     void Start()
     {
-        //PhotonNetwork.OfflineMode = true; // オフラインモードON
-        //PhotonNetwork.CreateRoom("OfflineRoom"); // ダミールーム作成
-
         if (photonView.IsMine)
         {
+            gameManager = GameObject.Find("GameManager").GetComponent<GameManager>();
+
             // 生成位置と回転は適当に指定（Canvas内UIならVector3.zero, Quaternion.identityでOK）
             GameObject obj = Instantiate(coolTimeBar, Vector3.zero, Quaternion.identity);
             FollowTransform ftf = obj.GetComponent<FollowTransform>();
@@ -57,7 +59,7 @@ public class PlayerController : MonoBehaviourPunCallbacks
         Vector3 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
         mousePos.z = 0; // 2DゲームならZ座標を0にする
 
-        if(photonView.IsMine)
+        if(photonView.IsMine && gameManager.isStart)
         {
             Moving();
             RotateToMouse(mousePos);
@@ -75,6 +77,8 @@ public class PlayerController : MonoBehaviourPunCallbacks
     {
         moveSpeed = 2.0f;      // 移動速度の初期化
 
+        PhotonNetwork.LocalPlayer.SetDead(false);
+
         // スクリーンの横幅、縦幅を取得
         screenWidth = Screen.width;
         screenHeight = Screen.height;
@@ -84,20 +88,28 @@ public class PlayerController : MonoBehaviourPunCallbacks
         minScreenPos = Camera.main.ScreenToWorldPoint(Vector3.zero);
     }
 
+    [PunRPC]
     // ダメージ処理
     public void TakeDamage()
     {
-        hp = Mathf.Clamp(hp--, 0, maxHp);
+        Debug.Log("ダメージを確認");
+
+        Mathf.Clamp(hp, 0, maxHp);
+        hp--;
 
         if(hp <= 0)
         {
-            Dead();
+            Debug.Log("HPが０になった");
+
+            photonView.RPC(nameof(Dead), RpcTarget.All);
         }
     }
 
+    [PunRPC]
     // 死亡処理
     void Dead()
     {
+        PhotonNetwork.LocalPlayer.SetDead(true);
         gameObject.SetActive(false);
     }
 
@@ -136,7 +148,8 @@ public class PlayerController : MonoBehaviourPunCallbacks
     // 弾を生成し、発射
     void Shooting()
     {
-        PhotonNetwork.Instantiate("Bullet", bulletSpawn.transform.position, transform.rotation);
+        GameObject bullet = PhotonNetwork.Instantiate("Bullet", bulletSpawn.transform.position, transform.rotation);
+        bullet.GetComponent<BulletController>().SetOwner(photonView.ViewID);
         hasBullet = false;
     }
 
@@ -153,6 +166,28 @@ public class PlayerController : MonoBehaviourPunCallbacks
                 hasBullet = true;
                 time = 0;
             }
+        }
+    }
+
+    // 死亡時の順位を設定
+    void SetNowRank()
+    {
+        GameManager game = GameObject.Find("GameManager").GetComponent<GameManager>();
+        PhotonNetwork.LocalPlayer.SetRank(game.GetPlayerCnt());
+    }
+
+    // 順位に応じてスコアを設定
+    void RankScore(int rank)
+    {
+        int[] rankScores = { 0, 4, 3, 2, 1 };
+        if (rank > 1 || rank < 4)
+        {
+            Debug.LogError("不正な順位を検知");
+            return;
+        }
+        else
+        {
+            PhotonNetwork.LocalPlayer.AddScore(rankScores[rank]);
         }
     }
 }
