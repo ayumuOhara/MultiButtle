@@ -846,13 +846,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fa8a42a0334e70f4093d58d8544c2578, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  farstSpawn: {fileID: 1612421071}
   spawnList:
-  - {fileID: 1612421071}
   - {fileID: 339251557}
   - {fileID: 138025829}
   - {fileID: 412905103}
   - {fileID: 786193565}
-  playerObjList: []
   playerCntText: {fileID: 1244065566}
   isStart: 0
 --- !u!4 &759387572

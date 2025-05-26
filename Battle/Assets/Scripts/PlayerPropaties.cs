@@ -67,6 +67,7 @@ public static class PlayerPropaties
     {
         playerHash[RankKey] = rank;
         player.SetCustomProperties(playerHash);
+        Debug.Log($"‡ˆÊ‚ğ{playerHash[RankKey]}‚Éİ’è");
         playerHash.Clear();
     }
 

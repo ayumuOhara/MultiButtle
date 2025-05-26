@@ -49,6 +49,10 @@ MonoBehaviour:
   - GameStart
   - SetSpawn
   - SetOwner
+  - AssignSpawnPosition
+  - RoundEnd
+  - RoundGame
+  - RoundStart
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 0

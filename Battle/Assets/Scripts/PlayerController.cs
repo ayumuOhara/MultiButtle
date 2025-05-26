@@ -110,6 +110,8 @@ public class PlayerController : MonoBehaviourPunCallbacks
     void Dead()
     {
         PhotonNetwork.LocalPlayer.SetDead(true);
+        SetNowRank();
+        //RankScore(PhotonNetwork.LocalPlayer.GetRank());
         gameObject.SetActive(false);
     }
 

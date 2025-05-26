@@ -2,16 +2,16 @@ using Photon.Pun;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
-using UnityEditor.Rendering;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class GameManager : MonoBehaviourPunCallbacks
 {
     [SerializeField]
-    List<Transform> spawnList = new List<Transform>();
+    Transform farstSpawn;
 
     [SerializeField]
-    List<GameObject> playerObjList = new List<GameObject>();
+    List<Transform> spawnList = new List<Transform>();
 
     [SerializeField]
     TextMeshProUGUI playerCntText;
@@ -19,7 +19,7 @@ public class GameManager : MonoBehaviourPunCallbacks
     bool hasSpawned = false;
     public bool isStart = false;
 
-    const int PLAYER_LIMIT_CNT = 2;     // 参加するプレイヤーの最大値
+    const int PLAYER_LIMIT_CNT = 2;
 
     public override void OnJoinedRoom()
     {
@@ -28,9 +28,6 @@ public class GameManager : MonoBehaviourPunCallbacks
 
     void Start()
     {
-        //PhotonNetwork.OfflineMode = true; // オフラインモードON
-        //PhotonNetwork.CreateRoom("OfflineRoom"); // ダミールーム作成
-
         TrySpawnPlayer();
 
         if (PhotonNetwork.IsMasterClient)
@@ -39,44 +36,21 @@ public class GameManager : MonoBehaviourPunCallbacks
         }
     }
 
+    // プレイヤーを初期位置にスポーン
     void TrySpawnPlayer()
     {
         if (!hasSpawned && PhotonNetwork.InRoom)
         {
-            GameObject obj = PhotonNetwork.Instantiate("Player", Vector3.zero, Quaternion.identity);
-            obj.transform.position = spawnList[0].transform.position;
-            PhotonView playerPhoton = obj.GetComponent<PhotonView>();
-            photonView.RPC(nameof(AddPlayerList), RpcTarget.MasterClient, playerPhoton.ViewID);
-            Debug.Log("プレイヤー生成：" + obj);
+            GameObject obj = PhotonNetwork.Instantiate("Player", farstSpawn.transform.position, Quaternion.identity);
             hasSpawned = true;
         }
     }
 
-    [PunRPC]
-    void AddPlayerList(int viewID)
-    {
-        PhotonView view = PhotonView.Find(viewID);
-        if (view != null)
-        {
-            GameObject player = view.gameObject;
-            if (!playerObjList.Contains(player))
-            {
-                playerObjList.Add(player);
-                Debug.Log($"プレイヤーをリストに追加: {player.name} (ViewID: {viewID})");
-            }
-        }
-        else
-        {
-            Debug.LogWarning($"ViewID {viewID} のオブジェクトが見つかりませんでした。");
-        }
-    }
 
-
-    // プレイヤーの生存人数
+    // プレイヤーの生存人数を取得
     public int GetPlayerCnt()
     {
         int playerCnt = 0;
-
         foreach (var p in PhotonNetwork.PlayerList)
         {
             bool dead = p.GetDead();
@@ -85,7 +59,6 @@ public class GameManager : MonoBehaviourPunCallbacks
                 playerCnt++;
             }
         }
-
         return playerCnt;
     }
 
@@ -95,10 +68,10 @@ public class GameManager : MonoBehaviourPunCallbacks
         while (true)
         {
             if (PhotonNetwork.CurrentRoom.PlayerCount == PLAYER_LIMIT_CNT)
-            {                
-                photonView.RPC(nameof(SetSpawn), RpcTarget.All);
-                photonView.RPC(nameof(GameStart), RpcTarget.All);
+            {
+                photonView.RPC(nameof(SetSpawn), RpcTarget.MasterClient);
                 photonView.RPC(nameof(PlayerCntText), RpcTarget.All, false);
+                photonView.RPC(nameof(RoundGame), RpcTarget.All);
                 yield break;
             }
             else
@@ -109,14 +82,53 @@ public class GameManager : MonoBehaviourPunCallbacks
         }
     }
 
-    // ゲームを開始する
+
+    // ラウンドを開始
     [PunRPC]
-    void GameStart()
+    void RoundStart()
     {
+        Debug.Log("ラウンドスタート");
         isStart = true;
     }
 
-    // 現在のプレイヤー数を表示
+    // ラウンドを終了
+    [PunRPC]
+    void RoundEnd()
+    {
+        Debug.Log("ラウンドエンド");
+        isStart = false;
+    }
+
+    [PunRPC]
+    // ラウンド処理
+    IEnumerator RoundGame()
+    {
+        int roundCnt = 1;
+
+        while (roundCnt < 16)
+        {
+            if(GetPlayerCnt() <= 1)
+            {
+                roundCnt++;
+                Debug.Log($"ラウンド：{roundCnt}");
+                
+                photonView.RPC(nameof(RoundEnd), RpcTarget.All);
+                photonView.RPC(nameof(SetSpawn), RpcTarget.MasterClient);
+                yield return new WaitForSeconds(3.0f);
+
+                photonView.RPC(nameof(RoundStart), RpcTarget.All);
+
+                yield return null;
+            }
+
+            yield return null;
+        }
+
+        Debug.Log("ゲームエンド");
+        yield break;
+    }
+
+    // プレイヤーの人数表示
     [PunRPC]
     void PlayerCntText(bool state)
     {
@@ -124,20 +136,47 @@ public class GameManager : MonoBehaviourPunCallbacks
         playerCntText.text = $"現在のプレイヤー数\n{PhotonNetwork.CurrentRoom.PlayerCount} / {PLAYER_LIMIT_CNT}";
     }
 
+    // 全プレイヤーのスポーン位置を設定
     [PunRPC]
-    // プレイヤーのスポーン地点を設定
     void SetSpawn()
     {
-        int[] rnd = { 0, 1, 2, 3 };
-        Shuffle(rnd); // シャッフル処理を呼び出す
+        if (!PhotonNetwork.IsMasterClient) return;
 
-        for (int i = 0; i < playerObjList.Count; i++)
+        // 添え字用の配列の要素をシャッフル
+        int[] indices = new int[spawnList.Count];
+        for (int i = 0; i < indices.Length; i++) indices[i] = i;
+        Shuffle(indices);
+
+        GameObject[] players = GameObject.FindGameObjectsWithTag("Player");
+        int assigned = 0;
+
+        // 全プレイヤー分のスポーン位置を割り振る
+        foreach (GameObject player in players)
         {
-            GameObject p = playerObjList[i];
-            PhotonView playerPhoton = p.GetComponent<PhotonView>();
+            PhotonView view = player.GetComponent<PhotonView>();
+            if (view != null)
+            {
+                int spawnIndex = indices[assigned % spawnList.Count];
+                // 対象のプレイヤーにスポーン位置を送信
+                photonView.RPC(nameof(AssignSpawnPosition), RpcTarget.All, view.ViewID, spawnIndex);
+                assigned++;
+            }
+        }
+    }
 
-            int spawnPoint = rnd[i]; // 重複なしのインデックスを使用
-            p.transform.position = spawnList[spawnPoint].transform.position;
+    // プレイヤーのスポーン位置割り振り
+    [PunRPC]
+    void AssignSpawnPosition(int viewID, int spawnIndex)
+    {
+        GameObject[] players = GameObject.FindGameObjectsWithTag("Player");
+        foreach (GameObject player in players)
+        {
+            PhotonView view = player.GetComponent<PhotonView>();
+            if (view != null && view.ViewID == viewID)
+            {
+                player.transform.position = spawnList[spawnIndex].position;
+                break;
+            }
         }
     }
 
@@ -152,5 +191,4 @@ public class GameManager : MonoBehaviourPunCallbacks
             array[j] = temp;
         }
     }
-
 }
