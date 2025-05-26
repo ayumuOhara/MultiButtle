@@ -5,11 +5,15 @@ public class BulletController : MonoBehaviourPunCallbacks
 {
     float moveSpeed = 10.0f;
     Vector3 moveVector = Vector3.zero;
-    int ownerViewID;
+    int ownerViewID = -1;
 
-    public void SetOwner(int viewID)
+    void Awake()
     {
-        ownerViewID = viewID;
+        // InstantiationData から ownerViewID を取得
+        if (photonView.InstantiationData != null && photonView.InstantiationData.Length > 0)
+        {
+            ownerViewID = (int)photonView.InstantiationData[0];
+        }
     }
 
     void OnEnable()
@@ -18,7 +22,7 @@ public class BulletController : MonoBehaviourPunCallbacks
 
         if (photonView.IsMine)
         {
-            photonView.RPC(nameof(DestroyBullet), RpcTarget.All);
+            Invoke(nameof(DestroyBullet), 5f); // ローカルで破棄タイマーを開始
         }
     }
 
@@ -27,10 +31,9 @@ public class BulletController : MonoBehaviourPunCallbacks
         Move();
     }
 
-    [PunRPC]
     void DestroyBullet()
     {
-        Destroy(this.gameObject, 5f);
+        Destroy(this.gameObject);
     }
 
     void OnTriggerEnter2D(Collider2D other)
@@ -38,16 +41,17 @@ public class BulletController : MonoBehaviourPunCallbacks
         PhotonView photonPlayer = other.gameObject.GetComponent<PhotonView>();
         if (photonPlayer != null)
         {
-            // 発射者と違うプレイヤーにしか当たらない
+            Debug.Log($"[Bullet] Hit ViewID: {photonPlayer.ViewID}, Owner ViewID: {ownerViewID}, Object: {other.gameObject.name}");
+
             if (photonPlayer.ViewID != ownerViewID)
             {
-                Debug.Log("他プレイヤーにヒット");
+                Debug.Log("[Bullet] Damage applied");
                 photonPlayer.RPC("TakeDamage", RpcTarget.All);
-                Destroy(gameObject); // ヒット後に弾を削除
+                Destroy(gameObject);
             }
             else
             {
-                Debug.Log("自分の弾なので無視");
+                Debug.Log("[Bullet] Hit owner, no damage");
             }
         }
     }

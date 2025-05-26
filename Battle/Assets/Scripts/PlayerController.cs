@@ -148,8 +148,8 @@ public class PlayerController : MonoBehaviourPunCallbacks
     // íeÇê∂ê¨ÇµÅAî≠éÀ
     void Shooting()
     {
-        GameObject bullet = PhotonNetwork.Instantiate("Bullet", bulletSpawn.transform.position, transform.rotation);
-        bullet.GetComponent<BulletController>().SetOwner(photonView.ViewID);
+        object[] instantiationData = new object[] { photonView.ViewID };
+        GameObject bullet = PhotonNetwork.Instantiate("Bullet", bulletSpawn.position, transform.rotation, 0, instantiationData);
         hasBullet = false;
     }
 
