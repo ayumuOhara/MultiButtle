@@ -47,20 +47,29 @@ public class GameManager : MonoBehaviourPunCallbacks
     }
 
 
-    // プレイヤーの生存人数を取得
+    // プレイヤーの生存数を取得
     public int GetPlayerCnt()
     {
         int playerCnt = 0;
         foreach (var p in PhotonNetwork.PlayerList)
         {
-            bool dead = p.GetDead();
-            if (!dead)
+            // カスタムプロパティ "Dead" が存在するか確認
+            if (p.CustomProperties.ContainsKey("Dead"))
             {
-                playerCnt++;
+                bool dead = p.GetDead();
+                if (!dead)
+                {
+                    playerCnt++;
+                }
+            }
+            else
+            {
+                Debug.LogWarning($"[Dead] プロパティが未設定のプレイヤー: {p.NickName}");
             }
         }
         return playerCnt;
     }
+
 
     // プレイヤーが揃うまで待機
     IEnumerator WaitPlayers()
@@ -71,6 +80,7 @@ public class GameManager : MonoBehaviourPunCallbacks
             {
                 photonView.RPC(nameof(SetSpawn), RpcTarget.MasterClient);
                 photonView.RPC(nameof(PlayerCntText), RpcTarget.All, false);
+                yield return new WaitForSeconds(1.0f);
                 photonView.RPC(nameof(RoundGame), RpcTarget.All);
                 yield break;
             }

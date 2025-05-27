@@ -15,6 +15,7 @@ public static class PlayerPropaties
     {
         playerHash[DeadKey] = dead;
         player.SetCustomProperties(playerHash);
+        Debug.Log($"死亡判定を{playerHash[DeadKey]}に設定");
         playerHash.Clear();
     }
 
@@ -37,6 +38,7 @@ public static class PlayerPropaties
     {
         playerHash[ScoreKey] = score;
         player.SetCustomProperties(playerHash);
+        Debug.Log($"スコアを{playerHash[ScoreKey]}に設定");
         playerHash.Clear();
     }
 
@@ -59,6 +61,7 @@ public static class PlayerPropaties
     {
         playerHash[ScoreKey] = player.GetScore() + score;
         player.SetCustomProperties(playerHash);
+        Debug.Log($"スコアを加算し{playerHash[ScoreKey]}に設定");
         playerHash.Clear();
     }
 

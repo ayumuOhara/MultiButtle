@@ -77,8 +77,6 @@ public class PlayerController : MonoBehaviourPunCallbacks
     {
         moveSpeed = 2.0f;      // 移動速度の初期化
 
-        PhotonNetwork.LocalPlayer.SetDead(false);
-
         // スクリーンの横幅、縦幅を取得
         screenWidth = Screen.width;
         screenHeight = Screen.height;
@@ -86,6 +84,14 @@ public class PlayerController : MonoBehaviourPunCallbacks
         // 取得した横幅、縦幅からスクリーンの座標の最小、最大値を設定
         maxScreenPos = Camera.main.ScreenToWorldPoint(new Vector3(screenWidth, screenHeight, 0));
         minScreenPos = Camera.main.ScreenToWorldPoint(Vector3.zero);
+    }
+
+    [PunRPC]
+    // プロパティの初期化
+    void SetPropaties()
+    {
+        PhotonNetwork.LocalPlayer.SetDead(false);
+        PhotonNetwork.LocalPlayer.SetRank(0);
     }
 
     [PunRPC]
