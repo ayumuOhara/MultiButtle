@@ -7,13 +7,12 @@ using UnityEngine;
 
 public class GameManager : MonoBehaviourPunCallbacks
 {
-    [SerializeField]
-    Transform farstSpawn;
+    public Transform farstSpawn;
 
     [SerializeField]
     List<Transform> spawnList = new List<Transform>();
 
-    [SerializeField]
+    [SerializeField] 
     TextMeshProUGUI playerCntText;
 
     bool hasSpawned = false;
@@ -74,14 +73,18 @@ public class GameManager : MonoBehaviourPunCallbacks
     // プレイヤーが揃うまで待機
     IEnumerator WaitPlayers()
     {
+        Debug.Log("プレイヤー待機コルーチンを開始");
+
         while (true)
         {
             if (PhotonNetwork.CurrentRoom.PlayerCount == PLAYER_LIMIT_CNT)
             {
+                Debug.Log("プレイヤーが揃った");
+
                 photonView.RPC(nameof(SetSpawn), RpcTarget.MasterClient);
                 photonView.RPC(nameof(PlayerCntText), RpcTarget.All, false);
                 yield return new WaitForSeconds(1.0f);
-                photonView.RPC(nameof(RoundGame), RpcTarget.All);
+                StartCoroutine(RoundGame());
                 yield break;
             }
             else
@@ -109,20 +112,24 @@ public class GameManager : MonoBehaviourPunCallbacks
         isStart = false;
     }
 
-    [PunRPC]
     // ラウンド処理
     IEnumerator RoundGame()
     {
+        Debug.Log("ラウンドループコルーチン開始");
+
+        photonView.RPC(nameof(RoundStart), RpcTarget.All);
+
         int roundCnt = 1;
 
         while (roundCnt < 16)
         {
-            if(GetPlayerCnt() <= 1)
+            if (GetPlayerCnt() <= 1)
             {
                 roundCnt++;
                 Debug.Log($"ラウンド：{roundCnt}");
-                
+
                 photonView.RPC(nameof(RoundEnd), RpcTarget.All);
+                photonView.RPC(nameof(SetAllPlayerProp), RpcTarget.All);
                 photonView.RPC(nameof(SetSpawn), RpcTarget.MasterClient);
                 yield return new WaitForSeconds(3.0f);
 
@@ -188,6 +195,22 @@ public class GameManager : MonoBehaviourPunCallbacks
                 break;
             }
         }
+    }
+
+    // プレイヤーのスポーン位置割り振り
+    [PunRPC]
+    void SetAllPlayerProp()
+    {
+        GameObject[] players = GameObject.FindGameObjectsWithTag("Player");
+        foreach (GameObject player in players)
+        {
+            PhotonView view = player.GetComponent<PhotonView>();
+            if (view != null)
+            {
+                view.RPC("SetPropaties", RpcTarget.All);
+                break;
+            }
+        }       
     }
 
     // 配列の要素をシャッフル

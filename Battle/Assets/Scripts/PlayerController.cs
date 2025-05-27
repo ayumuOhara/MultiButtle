@@ -31,6 +31,11 @@ public class PlayerController : MonoBehaviourPunCallbacks
 
     bool hasBullet = true;  // 弾が発射できるか
 
+    void OnEnable()
+    {
+        photonView.RPC(nameof(SetPropaties), RpcTarget.All);
+    }
+
     void Start()
     {
         if (photonView.IsMine)
@@ -54,12 +59,12 @@ public class PlayerController : MonoBehaviourPunCallbacks
     }
 
     void Update()
-    { 
+    {
         // マウスポインタのスクリーン座標をワールド座標に変換
         Vector3 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
         mousePos.z = 0; // 2DゲームならZ座標を0にする
 
-        if(photonView.IsMine && gameManager.isStart)
+        if (photonView.IsMine && gameManager.isStart && !PhotonNetwork.LocalPlayer.GetDead())
         {
             Moving();
             RotateToMouse(mousePos);
@@ -69,7 +74,7 @@ public class PlayerController : MonoBehaviourPunCallbacks
             {
                 Shooting();
             }
-        }       
+        }
     }
 
     // 変数の初期化
@@ -103,7 +108,7 @@ public class PlayerController : MonoBehaviourPunCallbacks
         Mathf.Clamp(hp, 0, maxHp);
         hp--;
 
-        if(hp <= 0)
+        if (hp <= 0)
         {
             Debug.Log("HPが０になった");
 
@@ -118,7 +123,7 @@ public class PlayerController : MonoBehaviourPunCallbacks
         PhotonNetwork.LocalPlayer.SetDead(true);
         SetNowRank();
         //RankScore(PhotonNetwork.LocalPlayer.GetRank());
-        gameObject.SetActive(false);
+        transform.position = gameManager.farstSpawn.transform.position;
     }
 
     // プレイヤーの移動
@@ -169,7 +174,7 @@ public class PlayerController : MonoBehaviourPunCallbacks
             time += Time.deltaTime;
             coolTimeFill.FillCoolTime(time, coolTime);
 
-            if(time >= coolTime)
+            if (time >= coolTime)
             {
                 hasBullet = true;
                 time = 0;
