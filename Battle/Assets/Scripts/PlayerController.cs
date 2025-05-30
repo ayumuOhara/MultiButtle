@@ -121,7 +121,7 @@ public class PlayerController : MonoBehaviourPunCallbacks
     void Dead()
     {
         PhotonNetwork.LocalPlayer.SetDead(true);
-        SetNowRank();
+        //SetNowRank();
         //RankScore(PhotonNetwork.LocalPlayer.GetRank());
         transform.position = gameManager.farstSpawn.transform.position;
     }

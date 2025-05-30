@@ -12,8 +12,14 @@ public class GameManager : MonoBehaviourPunCallbacks
     [SerializeField]
     List<Transform> spawnList = new List<Transform>();
 
-    [SerializeField] 
+    [SerializeField]
     TextMeshProUGUI playerCntText;
+
+    [SerializeField]
+    TextMeshProUGUI roundCntText;
+
+    [SerializeField]
+    GameObject roundCntTextObj;
 
     bool hasSpawned = false;
     public bool isStart = false;
@@ -120,8 +126,9 @@ public class GameManager : MonoBehaviourPunCallbacks
         photonView.RPC(nameof(RoundStart), RpcTarget.All);
 
         int roundCnt = 1;
+        photonView.RPC(nameof(RoundCntText), RpcTarget.All, roundCnt);
 
-        while (roundCnt < 16)
+        while (roundCnt <= 15)
         {
             if (GetPlayerCnt() <= 1)
             {
@@ -131,8 +138,7 @@ public class GameManager : MonoBehaviourPunCallbacks
                 photonView.RPC(nameof(RoundEnd), RpcTarget.All);
                 photonView.RPC(nameof(SetAllPlayerProp), RpcTarget.All);
                 photonView.RPC(nameof(SetSpawn), RpcTarget.MasterClient);
-                yield return new WaitForSeconds(3.0f);
-
+                photonView.RPC(nameof(RoundCntText), RpcTarget.All, roundCnt);
                 photonView.RPC(nameof(RoundStart), RpcTarget.All);
 
                 yield return null;
@@ -142,6 +148,19 @@ public class GameManager : MonoBehaviourPunCallbacks
         }
 
         Debug.Log("ゲームエンド");
+        yield break;
+    }
+
+    // ラウンド数表示
+    [PunRPC]
+    IEnumerator RoundCntText(int cnt)
+    {
+        roundCntTextObj.SetActive(true);
+        roundCntText.text = cnt.ToString();
+        yield return new WaitForSeconds(3.0f);
+        roundCntText.text = $"start";
+        yield return new WaitForSeconds(0.5f);
+        roundCntTextObj.SetActive(false);
         yield break;
     }
 
