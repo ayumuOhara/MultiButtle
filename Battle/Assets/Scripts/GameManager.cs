@@ -123,10 +123,9 @@ public class GameManager : MonoBehaviourPunCallbacks
     {
         Debug.Log("ラウンドループコルーチン開始");
 
-        photonView.RPC(nameof(RoundStart), RpcTarget.All);
-
         int roundCnt = 1;
         photonView.RPC(nameof(RoundCntText), RpcTarget.All, roundCnt);
+        photonView.RPC(nameof(RoundStart), RpcTarget.All);
 
         while (roundCnt <= 15)
         {
