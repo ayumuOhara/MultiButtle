@@ -5,7 +5,6 @@ using UnityEngine;
 public static class PlayerPropaties
 {
     private const string DeadKey = "Dead";
-    private const string ScoreKey = "Score";
     private const string RankKey = "Rank";
 
     private static readonly Hashtable playerHash = new Hashtable();
@@ -31,38 +30,6 @@ public static class PlayerPropaties
             Debug.LogError("[Dead]のカスタムプロパティを取得できませんでした");
             return false;
         }
-    }
-
-    // スコアを設定
-    public static void SetScore(this Player player, int score)
-    {
-        playerHash[ScoreKey] = score;
-        player.SetCustomProperties(playerHash);
-        Debug.Log($"スコアを{playerHash[ScoreKey]}に設定");
-        playerHash.Clear();
-    }
-
-    // スコアを取得
-    public static int GetScore(this Player player)
-    {
-        if (player.CustomProperties.TryGetValue(ScoreKey, out object value) && value is int score)
-        {
-            return score;
-        }
-        else
-        {
-            Debug.LogError("[Score]のカスタムプロパティを取得できませんでした");
-            return 0;
-        }
-    }
-
-    // スコアを加算
-    public static void AddScore(this Player player, int score)
-    {
-        playerHash[ScoreKey] = player.GetScore() + score;
-        player.SetCustomProperties(playerHash);
-        Debug.Log($"スコアを加算し{playerHash[ScoreKey]}に設定");
-        playerHash.Clear();
     }
 
     // 順位を設定

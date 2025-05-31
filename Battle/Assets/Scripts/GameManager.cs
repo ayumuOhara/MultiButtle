@@ -15,14 +15,9 @@ public class GameManager : MonoBehaviourPunCallbacks
     [SerializeField]
     TextMeshProUGUI playerCntText;
 
-    [SerializeField]
-    TextMeshProUGUI roundCntText;
-
-    [SerializeField]
-    GameObject roundCntTextObj;
-
     bool hasSpawned = false;
     public bool isStart = false;
+    public bool isStop { get; private set; } = false;
 
     const int PLAYER_LIMIT_CNT = 2;
 
@@ -90,7 +85,7 @@ public class GameManager : MonoBehaviourPunCallbacks
                 photonView.RPC(nameof(SetSpawn), RpcTarget.MasterClient);
                 photonView.RPC(nameof(PlayerCntText), RpcTarget.All, false);
                 yield return new WaitForSeconds(1.0f);
-                StartCoroutine(RoundGame());
+                StartCoroutine(InGame());
                 yield break;
             }
             else
@@ -101,66 +96,41 @@ public class GameManager : MonoBehaviourPunCallbacks
         }
     }
 
-
-    // ラウンドを開始
+    // ゲームを開始
     [PunRPC]
-    void RoundStart()
+    void StartGame()
     {
-        Debug.Log("ラウンドスタート");
+        Debug.Log("ゲームスタート");
         isStart = true;
     }
 
-    // ラウンドを終了
+    // ゲームを終了
     [PunRPC]
-    void RoundEnd()
+    void EndGame()
     {
-        Debug.Log("ラウンドエンド");
+        Debug.Log("ゲームエンド");
         isStart = false;
     }
 
-    // ラウンド処理
-    IEnumerator RoundGame()
+    // ゲーム処理
+    IEnumerator InGame()
     {
-        Debug.Log("ラウンドループコルーチン開始");
+        photonView.RPC(nameof(StartGame), RpcTarget.All);
 
-        int roundCnt = 1;
-        photonView.RPC(nameof(RoundCntText), RpcTarget.All, roundCnt);
-        photonView.RPC(nameof(RoundStart), RpcTarget.All);
-
-        while (roundCnt <= 15)
+        while (GetPlayerCnt() > 1)
         {
-            if (GetPlayerCnt() <= 1)
-            {
-                roundCnt++;
-                Debug.Log($"ラウンド：{roundCnt}");
-
-                photonView.RPC(nameof(RoundEnd), RpcTarget.All);
-                photonView.RPC(nameof(SetAllPlayerProp), RpcTarget.All);
-                photonView.RPC(nameof(SetSpawn), RpcTarget.MasterClient);
-                photonView.RPC(nameof(RoundCntText), RpcTarget.All, roundCnt);
-                photonView.RPC(nameof(RoundStart), RpcTarget.All);
-
-                yield return null;
-            }
-
             yield return null;
         }
 
-        Debug.Log("ゲームエンド");
+        photonView.RPC(nameof(EndGame), RpcTarget.All);
         yield break;
     }
 
-    // ラウンド数表示
+    // プレイヤーの動きを停止させる
     [PunRPC]
-    IEnumerator RoundCntText(int cnt)
+    void SetStop(bool stop)
     {
-        roundCntTextObj.SetActive(true);
-        roundCntText.text = cnt.ToString();
-        yield return new WaitForSeconds(3.0f);
-        roundCntText.text = $"start";
-        yield return new WaitForSeconds(0.5f);
-        roundCntTextObj.SetActive(false);
-        yield break;
+        isStop = stop;
     }
 
     // プレイヤーの人数表示
@@ -215,7 +185,7 @@ public class GameManager : MonoBehaviourPunCallbacks
         }
     }
 
-    // プレイヤーのスポーン位置割り振り
+    // プレイヤーのプロパティをセット
     [PunRPC]
     void SetAllPlayerProp()
     {

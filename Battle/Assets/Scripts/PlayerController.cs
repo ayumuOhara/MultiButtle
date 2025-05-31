@@ -11,9 +11,6 @@ public class PlayerController : MonoBehaviourPunCallbacks
     int hp = 1;
     int maxHp = 1;
 
-    CoolTimeFill coolTimeFill;
-
-    [SerializeField] GameObject coolTimeBar;    // クールタイムバーのプレファブ
     [SerializeField] GameObject bulletPrefab;   // 弾のプレファブ
     [SerializeField] Transform bulletSpawn;     // 弾が生成される場所
     [SerializeField] float rotateSpeed = 180f;  // 回転速度（1秒間に回転する角度の最大値）
@@ -30,6 +27,7 @@ public class PlayerController : MonoBehaviourPunCallbacks
     float coolTime = 5.0f;  // 次の弾が発射されるまでの時間
 
     bool hasBullet = true;  // 弾が発射できるか
+    bool hasFakeBullet = true;  // フェイク弾が発射できるか
 
     void OnEnable()
     {
@@ -41,19 +39,6 @@ public class PlayerController : MonoBehaviourPunCallbacks
         if (photonView.IsMine)
         {
             gameManager = GameObject.Find("GameManager").GetComponent<GameManager>();
-
-            // 生成位置と回転は適当に指定（Canvas内UIならVector3.zero, Quaternion.identityでOK）
-            GameObject obj = Instantiate(coolTimeBar, Vector3.zero, Quaternion.identity);
-            FollowTransform ftf = obj.GetComponent<FollowTransform>();
-            coolTimeFill = obj.GetComponent<CoolTimeFill>();
-            ftf.SetTarget(transform);
-
-            // CanvasのTransformを取得（例えば、Canvasに"Canvas"タグをつけているなら）
-            Transform canvasTransform = GameObject.FindGameObjectWithTag("Canvas").transform;
-
-            // 生成したオブジェクトの親をCanvasに設定（UIのRectTransformなら必ずこうする）
-            obj.transform.SetParent(canvasTransform, false);
-
             SetStatus();
         }
     }
@@ -62,17 +47,23 @@ public class PlayerController : MonoBehaviourPunCallbacks
     {
         // マウスポインタのスクリーン座標をワールド座標に変換
         Vector3 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-        mousePos.z = 0; // 2DゲームならZ座標を0にする
+        mousePos.z = 0;
 
         if (photonView.IsMine && gameManager.isStart && !PhotonNetwork.LocalPlayer.GetDead())
         {
-            Moving();
-            RotateToMouse(mousePos);
-            Reloading();
-
-            if (Input.GetMouseButtonDown(0) && hasBullet)
+            if(!gameManager.isStop)
             {
-                Shooting();
+                Moving();
+                RotateToMouse(mousePos);
+
+                if (Input.GetMouseButtonDown(0) && hasBullet)
+                {
+                    Shooting();
+                }
+                else if(Input.GetMouseButtonDown(1) && hasFakeBullet)
+                {
+                    Shooting(true);
+                }
             }
         }
     }
@@ -159,27 +150,21 @@ public class PlayerController : MonoBehaviourPunCallbacks
     }
 
     // 弾を生成し、発射
-    void Shooting()
+    void Shooting(bool fake = false)
     {
         object[] instantiationData = new object[] { photonView.ViewID };
         GameObject bullet = PhotonNetwork.Instantiate("Bullet", bulletSpawn.position, transform.rotation, 0, instantiationData);
-        hasBullet = false;
-    }
 
-    // リロード
-    void Reloading()
-    {
-        if (!hasBullet)
+        if (fake)
         {
-            time += Time.deltaTime;
-            coolTimeFill.FillCoolTime(time, coolTime);
-
-            if (time >= coolTime)
-            {
-                hasBullet = true;
-                time = 0;
-            }
+            hasFakeBullet = false;
+            PhotonView bulletView = bullet.GetComponent<PhotonView>();
+            bulletView.RPC("SetFake", RpcTarget.All, true);
         }
+        else
+        {            
+            hasBullet = false;
+        }        
     }
 
     // 死亡時の順位を設定
@@ -187,20 +172,5 @@ public class PlayerController : MonoBehaviourPunCallbacks
     {
         GameManager game = GameObject.Find("GameManager").GetComponent<GameManager>();
         PhotonNetwork.LocalPlayer.SetRank(game.GetPlayerCnt());
-    }
-
-    // 順位に応じてスコアを設定
-    void RankScore(int rank)
-    {
-        int[] rankScores = { 0, 4, 3, 2, 1 };
-        if (rank > 1 || rank < 4)
-        {
-            Debug.LogError("不正な順位を検知");
-            return;
-        }
-        else
-        {
-            PhotonNetwork.LocalPlayer.AddScore(rankScores[rank]);
-        }
     }
 }

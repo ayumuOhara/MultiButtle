@@ -58,6 +58,10 @@ MonoBehaviour:
   - SetAllPlayersProp
   - SetAllPlayerProp
   - RoundCntText
+  - EndGame
+  - StartGame
+  - SetFake
+  - SetStop
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 0

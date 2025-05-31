@@ -3,9 +3,11 @@ using UnityEngine;
 
 public class BulletController : MonoBehaviourPunCallbacks
 {
-    float moveSpeed = 10.0f;
+    float moveSpeed = 2.0f;
     Vector3 moveVector = Vector3.zero;
     int ownerViewID = -1;
+
+    bool isFake = false;    // フェイク弾か
 
     void Awake()
     {
@@ -14,6 +16,8 @@ public class BulletController : MonoBehaviourPunCallbacks
         {
             ownerViewID = (int)photonView.InstantiationData[0];
         }
+
+        RPCStop(true);
     }
 
     void OnEnable()
@@ -31,9 +35,18 @@ public class BulletController : MonoBehaviourPunCallbacks
         Move();
     }
 
+    [PunRPC]
+    // フェイク属性付与
+    public void SetFake(bool fake)
+    {
+        isFake = fake;
+    }
+
+    // 弾を消滅させる
     void DestroyBullet()
     {
-        Destroy(this.gameObject);
+        RPCStop(false);
+        Destroy(gameObject);
     }
 
     void OnTriggerEnter2D(Collider2D other)
@@ -45,17 +58,31 @@ public class BulletController : MonoBehaviourPunCallbacks
 
             if (photonPlayer.ViewID != ownerViewID)
             {
-                Debug.Log("[Bullet] Damage applied");
-                photonPlayer.RPC("TakeDamage", RpcTarget.All);
-                Destroy(gameObject);
+                if (isFake)
+                {
+                    DestroyBullet();
+                }
+                else
+                {
+                    photonPlayer.RPC("TakeDamage", RpcTarget.All);
+                    DestroyBullet();
+                }                
             }
             else
             {
-                Debug.Log("[Bullet] Hit owner, no damage");
+                Debug.Log("自身に当たったので何もおこらない");
             }
         }
     }
 
+    // GameManagerのisStopを呼び出す
+    void RPCStop(bool stop)
+    {
+        PhotonView gameView = GameObject.Find("GameManager").GetComponent<PhotonView>();
+        gameView.RPC("SetStop", RpcTarget.All, stop);
+    }
+
+    // 生成されたときのプレイヤーの向きに移動
     void Move()
     {
         transform.position += moveVector * moveSpeed * Time.deltaTime;
